@@ -136,6 +136,28 @@ export async function run(_args: string[]): Promise<void> {
     channelAuth.discord = 'configured';
   }
 
+  // iMessage: check for imsg CLI and a registered imessage: JID
+  const imsgDbPath = path.join(STORE_DIR, 'messages.db');
+  try {
+    execSync('command -v imsg', { stdio: 'ignore' });
+    if (fs.existsSync(imsgDbPath)) {
+      try {
+        const db = new Database(imsgDbPath, { readonly: true });
+        const row = db
+          .prepare(
+            "SELECT COUNT(*) as count FROM registered_groups WHERE jid LIKE 'imessage:%'",
+          )
+          .get() as { count: number };
+        db.close();
+        if (row.count > 0) channelAuth.imessage = 'configured';
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    // imsg not on PATH
+  }
+
   const configuredChannels = Object.keys(channelAuth);
   const anyChannelConfigured = configuredChannels.length > 0;
 
