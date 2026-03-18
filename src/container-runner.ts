@@ -165,8 +165,19 @@ function buildVolumeMounts(
     readonly: false,
   });
 
-  // Gmail credentials directory (for Gmail MCP inside the container)
+  // Dedicated SSH key for agent git operations (host: ~/.nanoclaw-keys → container: ~/.ssh)
+  // Uses a separate key dir so ~/.ssh is never mounted (blocked by mount security).
   const homeDir = os.homedir();
+  const nanoclaKeyDir = path.join(homeDir, '.nanoclaw-keys');
+  if (fs.existsSync(nanoclaKeyDir)) {
+    mounts.push({
+      hostPath: nanoclaKeyDir,
+      containerPath: '/home/node/.ssh',
+      readonly: true,
+    });
+  }
+
+  // Gmail credentials directory (for Gmail MCP inside the container)
   const gmailDir = path.join(homeDir, '.gmail-mcp');
   if (fs.existsSync(gmailDir)) {
     mounts.push({
