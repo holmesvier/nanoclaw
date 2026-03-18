@@ -14,6 +14,7 @@ import {
   DATA_DIR,
   GROUPS_DIR,
   IDLE_TIMEOUT,
+  OLLAMA_HOST,
   TIMEZONE,
 } from './config.js';
 import { resolveGroupFolderPath, resolveGroupIpcPath } from './group-folder.js';
@@ -220,6 +221,11 @@ function buildContainerArgs(
 
   // Pass host timezone so container's local time matches the user's
   args.push('-e', `TZ=${TIMEZONE}`);
+
+  // Forward Ollama host if configured (used by ollama-mcp-stdio.ts)
+  if (OLLAMA_HOST) {
+    args.push('-e', `OLLAMA_HOST=${OLLAMA_HOST}`);
+  }
 
   // Route API traffic through the credential proxy (containers never see real secrets)
   args.push(
