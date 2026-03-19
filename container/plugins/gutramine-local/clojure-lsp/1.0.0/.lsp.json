@@ -1,0 +1,12 @@
+{
+  "clojure": {
+    "command": "clojure-lsp",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".clj": "clojure",
+      ".cljs": "clojure",
+      ".cljc": "clojure",
+      ".edn": "clojure"
+    }
+  }
+}

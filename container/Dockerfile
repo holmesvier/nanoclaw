@@ -25,7 +25,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     libnss-wrapper \
-    && rm -rf /var/lib/apt/lists/*
+    sudo \
+    unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -s https://raw.githubusercontent.com/clojure-lsp/clojure-lsp/master/install | bash
 
 # Set Chromium path for agent-browser
 ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium

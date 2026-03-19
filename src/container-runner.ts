@@ -159,6 +159,41 @@ function buildVolumeMounts(
       fs.cpSync(srcDir, dstDir, { recursive: true });
     }
   }
+
+  // Sync plugins from container/plugins/ into each group's .claude/plugins/cache/
+  // and write installed_plugins.json with container-correct paths.
+  const pluginsSrc = path.join(process.cwd(), 'container', 'plugins');
+  if (fs.existsSync(pluginsSrc)) {
+    const pluginsCacheDst = path.join(groupSessionsDir, 'plugins', 'cache');
+    const installedPlugins: Record<string, object[]> = {};
+    for (const vendor of fs.readdirSync(pluginsSrc)) {
+      const vendorSrc = path.join(pluginsSrc, vendor);
+      if (!fs.statSync(vendorSrc).isDirectory()) continue;
+      for (const pluginName of fs.readdirSync(vendorSrc)) {
+        const pluginSrc = path.join(vendorSrc, pluginName);
+        if (!fs.statSync(pluginSrc).isDirectory()) continue;
+        for (const version of fs.readdirSync(pluginSrc)) {
+          const versionSrc = path.join(pluginSrc, version);
+          if (!fs.statSync(versionSrc).isDirectory()) continue;
+          const versionDst = path.join(pluginsCacheDst, vendor, pluginName, version);
+          fs.cpSync(versionSrc, versionDst, { recursive: true });
+          const containerInstallPath = `/home/node/.claude/plugins/cache/${vendor}/${pluginName}/${version}`;
+          const key = `${pluginName}@${vendor}`;
+          if (!installedPlugins[key]) installedPlugins[key] = [];
+          installedPlugins[key].push({
+            scope: 'user',
+            installPath: containerInstallPath,
+            version,
+            installedAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+          });
+        }
+      }
+    }
+    const installedPluginsFile = path.join(groupSessionsDir, 'plugins', 'installed_plugins.json');
+    fs.writeFileSync(installedPluginsFile, JSON.stringify({ version: 2, plugins: installedPlugins }, null, 2) + '\n');
+  }
+
   mounts.push({
     hostPath: groupSessionsDir,
     containerPath: '/home/node/.claude',
