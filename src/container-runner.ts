@@ -13,6 +13,7 @@ import {
   CONTAINER_TIMEOUT,
   CREDENTIAL_PROXY_PORT,
   DATA_DIR,
+  GITLAB_TOKEN,
   GROUPS_DIR,
   IDLE_TIMEOUT,
   OLLAMA_HOST,
@@ -175,7 +176,12 @@ function buildVolumeMounts(
         for (const version of fs.readdirSync(pluginSrc)) {
           const versionSrc = path.join(pluginSrc, version);
           if (!fs.statSync(versionSrc).isDirectory()) continue;
-          const versionDst = path.join(pluginsCacheDst, vendor, pluginName, version);
+          const versionDst = path.join(
+            pluginsCacheDst,
+            vendor,
+            pluginName,
+            version,
+          );
           fs.cpSync(versionSrc, versionDst, { recursive: true });
           const containerInstallPath = `/home/node/.claude/plugins/cache/${vendor}/${pluginName}/${version}`;
           const key = `${pluginName}@${vendor}`;
@@ -190,8 +196,15 @@ function buildVolumeMounts(
         }
       }
     }
-    const installedPluginsFile = path.join(groupSessionsDir, 'plugins', 'installed_plugins.json');
-    fs.writeFileSync(installedPluginsFile, JSON.stringify({ version: 2, plugins: installedPlugins }, null, 2) + '\n');
+    const installedPluginsFile = path.join(
+      groupSessionsDir,
+      'plugins',
+      'installed_plugins.json',
+    );
+    fs.writeFileSync(
+      installedPluginsFile,
+      JSON.stringify({ version: 2, plugins: installedPlugins }, null, 2) + '\n',
+    );
   }
 
   mounts.push({
@@ -208,6 +221,16 @@ function buildVolumeMounts(
     mounts.push({
       hostPath: nanoclaKeyDir,
       containerPath: '/home/node/.ssh',
+      readonly: true,
+    });
+  }
+
+  // Custom CA certs for Java (host: ~/.config/nanoclaw/certs → container: /run/nanoclaw-certs)
+  const nanoclawerCertsDir = path.join(homeDir, '.config', 'nanoclaw', 'certs');
+  if (fs.existsSync(nanoclawerCertsDir)) {
+    mounts.push({
+      hostPath: nanoclawerCertsDir,
+      containerPath: '/run/nanoclaw-certs',
       readonly: true,
     });
   }
@@ -283,6 +306,11 @@ function buildContainerArgs(
   // Forward Ollama host if configured (used by ollama-mcp-stdio.ts)
   if (OLLAMA_HOST) {
     args.push('-e', `OLLAMA_HOST=${OLLAMA_HOST}`);
+  }
+
+  // Forward GitLab token if configured (used by glab CLI)
+  if (GITLAB_TOKEN) {
+    args.push('-e', `GITLAB_TOKEN=${GITLAB_TOKEN}`);
   }
 
   // Route API traffic through the credential proxy (containers never see real secrets)
