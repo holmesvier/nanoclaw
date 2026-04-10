@@ -13,6 +13,9 @@ export const CONTAINER_RUNTIME_BIN = 'docker';
 /** Hostname for reaching the host from inside a container. */
 export const CONTAINER_HOST_GATEWAY = 'host.docker.internal';
 
+/** Host address the credential proxy binds to (accessible from containers via host gateway). */
+export const PROXY_BIND_HOST = '0.0.0.0';
+
 /** CLI args needed for the container to resolve the host gateway. */
 export function hostGatewayArgs(): string[] {
   // On Linux, host.docker.internal isn't built-in — add it explicitly

@@ -84,10 +84,22 @@ export class GmailChannel implements Channel {
 
     this.gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
 
-    // Verify connection
-    const profile = await this.gmail.users.getProfile({ userId: 'me' });
-    this.userEmail = profile.data.emailAddress || '';
-    logger.info({ email: this.userEmail }, 'Gmail channel connected');
+    // Verify connection — if the token is invalid, log a warning and bail
+    // without crashing the whole process.
+    try {
+      const profile = await this.gmail.users.getProfile({ userId: 'me' });
+      this.userEmail = profile.data.emailAddress || '';
+      logger.info({ email: this.userEmail }, 'Gmail channel connected');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn(
+        { err: msg },
+        'Gmail auth failed — token may be expired. Re-run /add-gmail to re-authorize. Gmail channel disabled.',
+      );
+      this.gmail = null;
+      this.oauth2Client = null;
+      return;
+    }
 
     // Start polling with error backoff
     const schedulePoll = () => {
